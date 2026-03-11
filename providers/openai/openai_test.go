@@ -947,7 +947,7 @@ func TestDoGenerate(t *testing.T) {
 		result, err := model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				LogProbs: new(true),
+				LogProbs: fantasy.Opt(true),
 			}),
 		})
 
@@ -1068,8 +1068,8 @@ func TestDoGenerate(t *testing.T) {
 				LogitBias: map[string]int64{
 					"50256": -100,
 				},
-				ParallelToolCalls: new(false),
-				User:              new("test-user-id"),
+				ParallelToolCalls: fantasy.Opt(false),
+				User:              fantasy.Opt("test-user-id"),
 			}),
 		})
 
@@ -1109,7 +1109,7 @@ func TestDoGenerate(t *testing.T) {
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(
 				&ProviderOptions{
-					ReasoningEffort: new(ReasoningEffortLow),
+					ReasoningEffort: ReasoningEffortOption(ReasoningEffortLow),
 				},
 			),
 		})
@@ -1149,7 +1149,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				TextVerbosity: new("low"),
+				TextVerbosity: fantasy.Opt("low"),
 			}),
 		})
 
@@ -1610,7 +1610,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				MaxCompletionTokens: new(int64(255)),
+				MaxCompletionTokens: fantasy.Opt(int64(255)),
 			}),
 		})
 
@@ -1694,7 +1694,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				Store: new(true),
+				Store: fantasy.Opt(true),
 			}),
 		})
 
@@ -1776,7 +1776,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				PromptCacheKey: new("test-cache-key-123"),
+				PromptCacheKey: fantasy.Opt("test-cache-key-123"),
 			}),
 		})
 
@@ -1815,7 +1815,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				SafetyIdentifier: new("test-safety-identifier-123"),
+				SafetyIdentifier: fantasy.Opt("test-safety-identifier-123"),
 			}),
 		})
 
@@ -1887,7 +1887,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("flex"),
+				ServiceTier: fantasy.Opt("flex"),
 			}),
 		})
 
@@ -1924,7 +1924,7 @@ func TestDoGenerate(t *testing.T) {
 		result, err := model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("flex"),
+				ServiceTier: fantasy.Opt("flex"),
 			}),
 		})
 
@@ -1958,7 +1958,7 @@ func TestDoGenerate(t *testing.T) {
 		_, err = model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("priority"),
+				ServiceTier: fantasy.Opt("priority"),
 			}),
 		})
 
@@ -1995,7 +1995,7 @@ func TestDoGenerate(t *testing.T) {
 		result, err := model.Generate(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("priority"),
+				ServiceTier: fantasy.Opt("priority"),
 			}),
 		})
 
@@ -2752,7 +2752,7 @@ func TestDoStream(t *testing.T) {
 		_, err = model.Stream(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				Store: new(true),
+				Store: fantasy.Opt(true),
 			}),
 		})
 
@@ -2842,7 +2842,7 @@ func TestDoStream(t *testing.T) {
 		_, err = model.Stream(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("flex"),
+				ServiceTier: fantasy.Opt("flex"),
 			}),
 		})
 
@@ -2885,7 +2885,7 @@ func TestDoStream(t *testing.T) {
 		_, err = model.Stream(context.Background(), fantasy.Call{
 			Prompt: testPrompt,
 			ProviderOptions: NewProviderOptions(&ProviderOptions{
-				ServiceTier: new("priority"),
+				ServiceTier: fantasy.Opt("priority"),
 			}),
 		})
 
@@ -3686,7 +3686,7 @@ func TestResponsesGenerate_StoreOption(t *testing.T) {
 		Prompt: testPrompt,
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
-				Store: new(true),
+				Store: fantasy.Opt(true),
 			},
 		},
 	})
@@ -3710,8 +3710,8 @@ func TestResponsesGenerate_PreviousResponseIDOption(t *testing.T) {
 		Prompt: testPrompt,
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
-				PreviousResponseID: new("resp_prev_123"),
-				Store:              new(true),
+				PreviousResponseID: fantasy.Opt("resp_prev_123"),
+				Store:              fantasy.Opt(true),
 			},
 		},
 	})
@@ -3758,7 +3758,7 @@ func TestResponsesGenerate_StateChainingAcrossTurns(t *testing.T) {
 	first, err := model.Generate(context.Background(), fantasy.Call{
 		Prompt: testPrompt,
 		ProviderOptions: fantasy.ProviderOptions{
-			Name: &ResponsesProviderOptions{Store: new(true)},
+			Name: &ResponsesProviderOptions{Store: fantasy.Opt(true)},
 		},
 	})
 	require.NoError(t, err)
@@ -3799,7 +3799,7 @@ func TestResponsesGenerate_StateChainingAcrossTurns(t *testing.T) {
 		},
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
-				Store:              new(true),
+				Store:              fantasy.Opt(true),
 				PreviousResponseID: &meta.ResponseID,
 			},
 		},
@@ -4164,7 +4164,7 @@ func TestResponsesStream_StoreOption(t *testing.T) {
 		Prompt: testPrompt,
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
-				Store: new(true),
+				Store: fantasy.Opt(true),
 			},
 		},
 	})
@@ -4197,8 +4197,8 @@ func TestResponsesStream_PreviousResponseIDOption(t *testing.T) {
 		Prompt: testPrompt,
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
-				PreviousResponseID: new("resp_prev_456"),
-				Store:              new(true),
+				PreviousResponseID: fantasy.Opt("resp_prev_456"),
+				Store:              fantasy.Opt(true),
 			},
 		},
 	})

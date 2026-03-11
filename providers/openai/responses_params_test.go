@@ -21,12 +21,12 @@ func TestPrepareParams_Store(t *testing.T) {
 	}{
 		{
 			name:      "store true",
-			opts:      &ResponsesProviderOptions{Store: new(true)},
+			opts:      &ResponsesProviderOptions{Store: fantasy.Opt(true)},
 			wantStore: true,
 		},
 		{
 			name:      "store false",
-			opts:      &ResponsesProviderOptions{Store: new(false)},
+			opts:      &ResponsesProviderOptions{Store: fantasy.Opt(false)},
 			wantStore: false,
 		},
 		{
@@ -42,6 +42,7 @@ func TestPrepareParams_Store(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -64,8 +65,8 @@ func TestPrepareParams_PreviousResponseID(t *testing.T) {
 		t.Parallel()
 
 		params, warnings, err := lm.prepareParams(testCall(prompt, &ResponsesProviderOptions{
-			PreviousResponseID: new("resp_abc123"),
-			Store:              new(true),
+			PreviousResponseID: fantasy.Opt("resp_abc123"),
+			Store:              fantasy.Opt(true),
 		}))
 		require.NoError(t, err)
 		require.Empty(t, warnings)
@@ -86,7 +87,7 @@ func TestPrepareParams_PreviousResponseID(t *testing.T) {
 		t.Parallel()
 
 		params, warnings, err := lm.prepareParams(testCall(prompt, &ResponsesProviderOptions{
-			PreviousResponseID: new(""),
+			PreviousResponseID: fantasy.Opt(""),
 		}))
 		require.NoError(t, err)
 		require.Empty(t, warnings)
@@ -99,8 +100,8 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 
 	lm := testResponsesLM()
 	opts := &ResponsesProviderOptions{
-		PreviousResponseID: new("resp_abc123"),
-		Store:              new(true),
+		PreviousResponseID: fantasy.Opt("resp_abc123"),
+		Store:              fantasy.Opt(true),
 	}
 
 	t.Run("rejects with assistant messages", func(t *testing.T) {
@@ -151,7 +152,7 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 		_, _, err := lm.prepareParams(testCall(fantasy.Prompt{
 			testTextMessage(fantasy.MessageRoleUser, "hello"),
 		}, &ResponsesProviderOptions{
-			PreviousResponseID: new("resp_abc123"),
+			PreviousResponseID: fantasy.Opt("resp_abc123"),
 		}))
 		require.EqualError(t, err, previousResponseIDStoreError)
 	})
@@ -162,8 +163,8 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 		_, _, err := lm.prepareParams(testCall(fantasy.Prompt{
 			testTextMessage(fantasy.MessageRoleUser, "hello"),
 		}, &ResponsesProviderOptions{
-			PreviousResponseID: new("resp_abc123"),
-			Store:              new(false),
+			PreviousResponseID: fantasy.Opt("resp_abc123"),
+			Store:              fantasy.Opt(false),
 		}))
 		require.EqualError(t, err, previousResponseIDStoreError)
 	})
@@ -222,6 +223,7 @@ func TestValidatePreviousResponseIDPrompt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
