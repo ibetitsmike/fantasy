@@ -141,22 +141,28 @@ const (
 
 // ResponsesProviderOptions represents additional options for OpenAI Responses API.
 type ResponsesProviderOptions struct {
-	Include            []IncludeType    `json:"include"`
-	Instructions       *string          `json:"instructions"`
-	Logprobs           any              `json:"logprobs"`
-	MaxToolCalls       *int64           `json:"max_tool_calls"`
-	Metadata           map[string]any   `json:"metadata"`
-	ParallelToolCalls  *bool            `json:"parallel_tool_calls"`
+	Include           []IncludeType  `json:"include"`
+	Instructions      *string        `json:"instructions"`
+	Logprobs          any            `json:"logprobs"`
+	MaxToolCalls      *int64         `json:"max_tool_calls"`
+	Metadata          map[string]any `json:"metadata"`
+	ParallelToolCalls *bool          `json:"parallel_tool_calls"`
+	// PreviousResponseID chains this request to a prior stored response, enabling
+	// server-side conversation state. When set, the prompt should contain only the
+	// new incremental turn—not replayed assistant history.
 	PreviousResponseID *string          `json:"previous_response_id"`
 	PromptCacheKey     *string          `json:"prompt_cache_key"`
 	ReasoningEffort    *ReasoningEffort `json:"reasoning_effort"`
 	ReasoningSummary   *string          `json:"reasoning_summary"`
 	SafetyIdentifier   *string          `json:"safety_identifier"`
 	ServiceTier        *ServiceTier     `json:"service_tier"`
-	Store              *bool            `json:"store"`
-	StrictJSONSchema   *bool            `json:"strict_json_schema"`
-	TextVerbosity      *TextVerbosity   `json:"text_verbosity"`
-	User               *string          `json:"user"`
+	// Store indicates whether OpenAI should persist this response for future
+	// retrieval and chaining via PreviousResponseID. Defaults to false to prevent
+	// unintended storage of potentially sensitive conversations.
+	Store            *bool          `json:"store"`
+	StrictJSONSchema *bool          `json:"strict_json_schema"`
+	TextVerbosity    *TextVerbosity `json:"text_verbosity"`
+	User             *string        `json:"user"`
 }
 
 // Options implements the ProviderOptions interface.

@@ -81,6 +81,17 @@ func TestPrepareParams_PreviousResponseID(t *testing.T) {
 		require.Empty(t, warnings)
 		require.False(t, params.PreviousResponseID.Valid())
 	})
+
+	t.Run("empty string ignored", func(t *testing.T) {
+		t.Parallel()
+
+		params, warnings, err := lm.prepareParams(testCall(prompt, &ResponsesProviderOptions{
+			PreviousResponseID: fantasy.Opt(""),
+		}))
+		require.NoError(t, err)
+		require.Empty(t, warnings)
+		require.False(t, params.PreviousResponseID.Valid())
+	})
 }
 
 func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {

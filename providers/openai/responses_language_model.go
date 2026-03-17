@@ -163,7 +163,7 @@ func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.Res
 		params.Store = param.NewOpt(false)
 	}
 
-	if openaiOptions != nil && openaiOptions.PreviousResponseID != nil {
+	if openaiOptions != nil && openaiOptions.PreviousResponseID != nil && *openaiOptions.PreviousResponseID != "" {
 		if err := validatePreviousResponseIDPrompt(call.Prompt); err != nil {
 			return nil, warnings, err
 		}
@@ -901,6 +901,11 @@ func (o responsesLanguageModel) Stream(ctx context.Context, call fantasy.Call) (
 
 	finishReason := fantasy.FinishReasonUnknown
 	var usage fantasy.Usage
+	// responseID tracks the server-assigned response ID. It's first set from the
+	// response.created event and may be overwritten by response.completed or
+	// response.incomplete events. Per the OpenAI API contract, these IDs are
+	// identical; the overwrites ensure we have the final value even if an event
+	// is missed.
 	responseID := ""
 	ongoingToolCalls := make(map[int64]*ongoingToolCall)
 	hasFunctionCall := false
@@ -1449,6 +1454,11 @@ func (o responsesLanguageModel) streamObjectWithJSONMode(ctx context.Context, ca
 		var lastParsedObject any
 		var usage fantasy.Usage
 		var finishReason fantasy.FinishReason
+		// responseID tracks the server-assigned response ID. It's first set from the
+		// response.created event and may be overwritten by response.completed or
+		// response.incomplete events. Per the OpenAI API contract, these IDs are
+		// identical; the overwrites ensure we have the final value even if an event
+		// is missed.
 		var responseID string
 		var streamErr error
 		hasFunctionCall := false
