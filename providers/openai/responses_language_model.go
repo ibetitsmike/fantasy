@@ -377,6 +377,7 @@ func responsesProviderMetadata(responseID string) fantasy.ProviderMetadata {
 func responsesUsage(resp responses.Response) fantasy.Usage {
 	usage := fantasy.Usage{
 		InputTokens:  resp.Usage.InputTokens,
+		PromptTokens: max(int64(0), resp.Usage.InputTokens-resp.Usage.InputTokensDetails.CachedTokens),
 		OutputTokens: resp.Usage.OutputTokens,
 		TotalTokens:  resp.Usage.InputTokens + resp.Usage.OutputTokens,
 	}
@@ -1344,6 +1345,7 @@ func (o responsesLanguageModel) generateObjectWithJSONMode(ctx context.Context, 
 	if jsonText == "" {
 		usage := fantasy.Usage{
 			InputTokens:  response.Usage.InputTokens,
+			PromptTokens: response.Usage.InputTokens,
 			OutputTokens: response.Usage.OutputTokens,
 			TotalTokens:  response.Usage.InputTokens + response.Usage.OutputTokens,
 		}

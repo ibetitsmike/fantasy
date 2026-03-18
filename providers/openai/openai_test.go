@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"charm.land/fantasy"
+	"charm.land/fantasy/object"
 	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -857,6 +858,7 @@ func TestDoGenerate(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, int64(20), result.Usage.InputTokens)
+		require.Equal(t, int64(20), result.Usage.PromptTokens)
 		require.Equal(t, int64(5), result.Usage.OutputTokens)
 		require.Equal(t, int64(25), result.Usage.TotalTokens)
 	})
@@ -923,6 +925,7 @@ func TestDoGenerate(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, int64(20), result.Usage.InputTokens)
+		require.Equal(t, int64(20), result.Usage.PromptTokens)
 		require.Equal(t, int64(0), result.Usage.OutputTokens)
 		require.Equal(t, int64(20), result.Usage.TotalTokens)
 	})
@@ -1426,6 +1429,7 @@ func TestDoGenerate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, int64(1152), result.Usage.CacheReadTokens)
 		require.Equal(t, int64(15), result.Usage.InputTokens)
+		require.Equal(t, int64(0), result.Usage.PromptTokens)
 		require.Equal(t, int64(20), result.Usage.OutputTokens)
 		require.Equal(t, int64(35), result.Usage.TotalTokens)
 	})
@@ -1584,6 +1588,7 @@ func TestDoGenerate(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, int64(15), result.Usage.InputTokens)
+		require.Equal(t, int64(15), result.Usage.PromptTokens)
 		require.Equal(t, int64(20), result.Usage.OutputTokens)
 		require.Equal(t, int64(35), result.Usage.TotalTokens)
 		require.Equal(t, int64(10), result.Usage.ReasoningTokens)
@@ -2337,6 +2342,7 @@ func TestDoStream(t *testing.T) {
 		finishPart := parts[finish]
 		require.Equal(t, fantasy.FinishReasonStop, finishPart.FinishReason)
 		require.Equal(t, int64(17), finishPart.Usage.InputTokens)
+		require.Equal(t, int64(17), finishPart.Usage.PromptTokens)
 		require.Equal(t, int64(227), finishPart.Usage.OutputTokens)
 		require.Equal(t, int64(244), finishPart.Usage.TotalTokens)
 	})
@@ -2595,6 +2601,7 @@ func TestDoStream(t *testing.T) {
 		require.NotNil(t, finishPart)
 		require.Equal(t, int64(1152), finishPart.Usage.CacheReadTokens)
 		require.Equal(t, int64(15), finishPart.Usage.InputTokens)
+		require.Equal(t, int64(0), finishPart.Usage.PromptTokens)
 		require.Equal(t, int64(20), finishPart.Usage.OutputTokens)
 		require.Equal(t, int64(35), finishPart.Usage.TotalTokens)
 	})
@@ -2913,6 +2920,7 @@ func TestDoStream(t *testing.T) {
 
 		require.NotNil(t, finishPart)
 		require.Equal(t, int64(15), finishPart.Usage.InputTokens)
+		require.Equal(t, int64(15), finishPart.Usage.PromptTokens)
 		require.Equal(t, int64(20), finishPart.Usage.OutputTokens)
 		require.Equal(t, int64(35), finishPart.Usage.TotalTokens)
 		require.Equal(t, int64(10), finishPart.Usage.ReasoningTokens)
@@ -3499,9 +3507,15 @@ func mockResponsesWebSearchResponse() map[string]any {
 		},
 		"status": "completed",
 		"usage": map[string]any{
-			"input_tokens":  100,
+			"input_tokens": 100,
+			"input_tokens_details": map[string]any{
+				"cached_tokens": 40,
+			},
 			"output_tokens": 50,
-			"total_tokens":  150,
+			"output_tokens_details": map[string]any{
+				"reasoning_tokens": 0,
+			},
+			"total_tokens": 150,
 		},
 	}
 }
@@ -3536,6 +3550,11 @@ func TestResponsesGenerate_WebSearchResponse(t *testing.T) {
 
 	require.Equal(t, "POST", server.calls[0].method)
 	require.Equal(t, "/responses", server.calls[0].path)
+	require.Equal(t, int64(100), resp.Usage.InputTokens)
+	require.Equal(t, int64(60), resp.Usage.PromptTokens)
+	require.Equal(t, int64(40), resp.Usage.CacheReadTokens)
+	require.Equal(t, int64(50), resp.Usage.OutputTokens)
+	require.Equal(t, int64(150), resp.Usage.TotalTokens)
 
 	var (
 		toolCalls   []fantasy.ToolCallContent
@@ -3591,6 +3610,43 @@ func TestResponsesGenerate_WebSearchResponse(t *testing.T) {
 		"Based on recent search results, here is the latest AI news.",
 		texts[0].Text,
 	)
+}
+
+func TestResponsesGenerateObject_NoTextContentUsage(t *testing.T) {
+	t.Parallel()
+
+	type responseObject struct {
+		Answer string `json:"answer"`
+	}
+
+	server := newMockServer()
+	defer server.close()
+	server.response = map[string]any{
+		"id":     "resp_no_text",
+		"object": "response",
+		"model":  "gpt-4.1",
+		"output": []any{},
+		"status": "completed",
+		"usage": map[string]any{
+			"input_tokens":  42,
+			"output_tokens": 7,
+			"total_tokens":  49,
+		},
+	}
+
+	model := newResponsesProvider(t, server.server.URL)
+
+	_, err := object.Generate[responseObject](context.Background(), model, fantasy.ObjectCall{
+		Prompt: testPrompt,
+	})
+	require.Error(t, err)
+
+	var noObjectErr *fantasy.NoObjectGeneratedError
+	require.ErrorAs(t, err, &noObjectErr)
+	require.Equal(t, int64(42), noObjectErr.Usage.InputTokens)
+	require.Equal(t, int64(42), noObjectErr.Usage.PromptTokens)
+	require.Equal(t, int64(7), noObjectErr.Usage.OutputTokens)
+	require.Equal(t, int64(49), noObjectErr.Usage.TotalTokens)
 }
 
 func TestResponsesGenerate_StoreOption(t *testing.T) {
@@ -3899,7 +3955,7 @@ func TestResponsesStream_WebSearchResponse(t *testing.T) {
 		"event: response.output_item.done\n" +
 			`data: {"type":"response.output_item.done","output_index":1,"item":{"type":"message","id":"msg_01","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Here are the results.","annotations":[{"type":"url_citation","url":"https://example.com/ai-news","title":"Latest AI News","start_index":0,"end_index":21}]}]}}` + "\n\n",
 		"event: response.completed\n" +
-			`data: {"type":"response.completed","response":{"id":"resp_01","status":"completed","output":[],"usage":{"input_tokens":100,"output_tokens":50,"total_tokens":150}}}` + "\n\n",
+			`data: {"type":"response.completed","response":{"id":"resp_01","status":"completed","output":[],"usage":{"input_tokens":100,"input_tokens_details":{"cached_tokens":40},"output_tokens":50,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":150}}}` + "\n\n",
 	}
 
 	sms := newStreamingMockServer()
@@ -3959,6 +4015,11 @@ func TestResponsesStream_WebSearchResponse(t *testing.T) {
 	require.Equal(t, "Here are the results.", textDeltas[0].Delta)
 
 	require.Len(t, finishes, 1)
+	require.Equal(t, int64(100), finishes[0].Usage.InputTokens)
+	require.Equal(t, int64(60), finishes[0].Usage.PromptTokens)
+	require.Equal(t, int64(40), finishes[0].Usage.CacheReadTokens)
+	require.Equal(t, int64(50), finishes[0].Usage.OutputTokens)
+	require.Equal(t, int64(150), finishes[0].Usage.TotalTokens)
 	responsesMeta, ok := finishes[0].ProviderMetadata[Name].(*ResponsesProviderMetadata)
 	require.True(t, ok)
 	require.Equal(t, "resp_01", responsesMeta.ResponseID)

@@ -213,6 +213,7 @@ func DefaultUsageFunc(response openai.ChatCompletion) (fantasy.Usage, fantasy.Pr
 	}
 	return fantasy.Usage{
 		InputTokens:     response.Usage.PromptTokens,
+		PromptTokens:    max(int64(0), response.Usage.PromptTokens-promptTokenDetails.CachedTokens),
 		OutputTokens:    response.Usage.CompletionTokens,
 		TotalTokens:     response.Usage.TotalTokens,
 		ReasoningTokens: completionTokenDetails.ReasoningTokens,
@@ -239,6 +240,7 @@ func DefaultStreamUsageFunc(chunk openai.ChatCompletionChunk, _ map[string]any, 
 	promptTokenDetails := chunk.Usage.PromptTokensDetails
 	usage := fantasy.Usage{
 		InputTokens:     chunk.Usage.PromptTokens,
+		PromptTokens:    max(int64(0), chunk.Usage.PromptTokens-promptTokenDetails.CachedTokens),
 		OutputTokens:    chunk.Usage.CompletionTokens,
 		TotalTokens:     chunk.Usage.TotalTokens,
 		ReasoningTokens: completionTokenDetails.ReasoningTokens,
