@@ -123,6 +123,7 @@ func getResponsesModelConfig(modelID string) responsesModelConfig {
 
 const (
 	previousResponseIDHistoryError = "cannot combine previous_response_id with replayed conversation history; use either previous_response_id (server-side chaining) or explicit message replay, not both"
+	previousResponseIDStoreError   = "previous_response_id requires store to be true; the current response will not be stored and cannot be used for further chaining"
 )
 
 func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.ResponseNewParams, []fantasy.CallWarning, error) {
@@ -168,6 +169,9 @@ func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.Res
 	if openaiOptions != nil && openaiOptions.PreviousResponseID != nil && *openaiOptions.PreviousResponseID != "" {
 		if err := validatePreviousResponseIDPrompt(call.Prompt); err != nil {
 			return nil, warnings, err
+		}
+		if openaiOptions.Store == nil || !*openaiOptions.Store {
+			return nil, warnings, errors.New(previousResponseIDStoreError)
 		}
 		params.PreviousResponseID = param.NewOpt(*openaiOptions.PreviousResponseID)
 	}

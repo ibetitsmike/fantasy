@@ -3631,6 +3631,7 @@ func TestResponsesGenerate_PreviousResponseIDOption(t *testing.T) {
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
 				PreviousResponseID: fantasy.Opt("resp_prev_123"),
+				Store:              fantasy.Opt(true),
 			},
 		},
 	})
@@ -4015,6 +4016,7 @@ func TestResponsesStream_PreviousResponseIDOption(t *testing.T) {
 		ProviderOptions: fantasy.ProviderOptions{
 			Name: &ResponsesProviderOptions{
 				PreviousResponseID: fantasy.Opt("resp_prev_456"),
+				Store:              fantasy.Opt(true),
 			},
 		},
 	})
