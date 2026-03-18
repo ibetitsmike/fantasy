@@ -132,15 +132,14 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 		require.Empty(t, warnings)
 	})
 
-	t.Run("allows tool messages without assistant history", func(t *testing.T) {
+	t.Run("rejects tool messages", func(t *testing.T) {
 		t.Parallel()
 
-		_, warnings, err := lm.prepareParams(testCall(fantasy.Prompt{
+		_, _, err := lm.prepareParams(testCall(fantasy.Prompt{
 			testToolResultMessage("done"),
 			testTextMessage(fantasy.MessageRoleUser, "hello"),
 		}, opts))
-		require.NoError(t, err)
-		require.Empty(t, warnings)
+		require.EqualError(t, err, previousResponseIDHistoryError)
 	})
 }
 
@@ -182,6 +181,14 @@ func TestValidatePreviousResponseIDPrompt(t *testing.T) {
 			prompt: fantasy.Prompt{
 				testTextMessage(fantasy.MessageRoleUser, "hello"),
 				testTextMessage(fantasy.MessageRoleAssistant, "hi there"),
+				testTextMessage(fantasy.MessageRoleUser, "follow up"),
+			},
+			wantErr: true,
+		},
+		{
+			name: "contains tool message",
+			prompt: fantasy.Prompt{
+				testToolResultMessage("done"),
 				testTextMessage(fantasy.MessageRoleUser, "follow up"),
 			},
 			wantErr: true,
