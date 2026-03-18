@@ -66,6 +66,7 @@ func TestPrepareParams_PreviousResponseID(t *testing.T) {
 
 		params, warnings, err := lm.prepareParams(testCall(prompt, &ResponsesProviderOptions{
 			PreviousResponseID: fantasy.Opt("resp_abc123"),
+			Store:              fantasy.Opt(true),
 		}))
 		require.NoError(t, err)
 		require.Empty(t, warnings)
@@ -98,7 +99,10 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 	t.Parallel()
 
 	lm := testResponsesLM()
-	opts := &ResponsesProviderOptions{PreviousResponseID: fantasy.Opt("resp_abc123")}
+	opts := &ResponsesProviderOptions{
+		PreviousResponseID: fantasy.Opt("resp_abc123"),
+		Store:              fantasy.Opt(true),
+	}
 
 	t.Run("rejects with assistant messages", func(t *testing.T) {
 		t.Parallel()
@@ -140,6 +144,29 @@ func TestPrepareParams_PreviousResponseID_Validation(t *testing.T) {
 			testTextMessage(fantasy.MessageRoleUser, "hello"),
 		}, opts))
 		require.EqualError(t, err, previousResponseIDHistoryError)
+	})
+
+	t.Run("rejects without store", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := lm.prepareParams(testCall(fantasy.Prompt{
+			testTextMessage(fantasy.MessageRoleUser, "hello"),
+		}, &ResponsesProviderOptions{
+			PreviousResponseID: fantasy.Opt("resp_abc123"),
+		}))
+		require.EqualError(t, err, previousResponseIDStoreError)
+	})
+
+	t.Run("rejects with store false", func(t *testing.T) {
+		t.Parallel()
+
+		_, _, err := lm.prepareParams(testCall(fantasy.Prompt{
+			testTextMessage(fantasy.MessageRoleUser, "hello"),
+		}, &ResponsesProviderOptions{
+			PreviousResponseID: fantasy.Opt("resp_abc123"),
+			Store:              fantasy.Opt(false),
+		}))
+		require.EqualError(t, err, previousResponseIDStoreError)
 	})
 }
 
