@@ -370,6 +370,21 @@ func responsesProviderMetadata(responseID string) fantasy.ProviderMetadata {
 	}
 }
 
+func responsesUsage(resp responses.Response) fantasy.Usage {
+	usage := fantasy.Usage{
+		InputTokens:  resp.Usage.InputTokens,
+		OutputTokens: resp.Usage.OutputTokens,
+		TotalTokens:  resp.Usage.InputTokens + resp.Usage.OutputTokens,
+	}
+	if resp.Usage.OutputTokensDetails.ReasoningTokens != 0 {
+		usage.ReasoningTokens = resp.Usage.OutputTokensDetails.ReasoningTokens
+	}
+	if resp.Usage.InputTokensDetails.CachedTokens != 0 {
+		usage.CacheReadTokens = resp.Usage.InputTokensDetails.CachedTokens
+	}
+	return usage
+}
+
 func toResponsesPrompt(prompt fantasy.Prompt, systemMessageMode string) (responses.ResponseInputParam, []fantasy.CallWarning) {
 	var input responses.ResponseInputParam
 	var warnings []fantasy.CallWarning
@@ -855,19 +870,7 @@ func (o responsesLanguageModel) Generate(ctx context.Context, call fantasy.Call)
 		}
 	}
 
-	usage := fantasy.Usage{
-		InputTokens:  response.Usage.InputTokens,
-		OutputTokens: response.Usage.OutputTokens,
-		TotalTokens:  response.Usage.InputTokens + response.Usage.OutputTokens,
-	}
-
-	if response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-		usage.ReasoningTokens = response.Usage.OutputTokensDetails.ReasoningTokens
-	}
-	if response.Usage.InputTokensDetails.CachedTokens != 0 {
-		usage.CacheReadTokens = response.Usage.InputTokensDetails.CachedTokens
-	}
-
+	usage := responsesUsage(*response)
 	finishReason := mapResponsesFinishReason(response.IncompleteDetails.Reason, hasFunctionCall)
 
 	return &fantasy.Response{
@@ -1137,33 +1140,13 @@ func (o responsesLanguageModel) Stream(ctx context.Context, call fantasy.Call) (
 				completed := event.AsResponseCompleted()
 				responseID = completed.Response.ID
 				finishReason = mapResponsesFinishReason(completed.Response.IncompleteDetails.Reason, hasFunctionCall)
-				usage = fantasy.Usage{
-					InputTokens:  completed.Response.Usage.InputTokens,
-					OutputTokens: completed.Response.Usage.OutputTokens,
-					TotalTokens:  completed.Response.Usage.InputTokens + completed.Response.Usage.OutputTokens,
-				}
-				if completed.Response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-					usage.ReasoningTokens = completed.Response.Usage.OutputTokensDetails.ReasoningTokens
-				}
-				if completed.Response.Usage.InputTokensDetails.CachedTokens != 0 {
-					usage.CacheReadTokens = completed.Response.Usage.InputTokensDetails.CachedTokens
-				}
+				usage = responsesUsage(completed.Response)
 
 			case "response.incomplete":
 				incomplete := event.AsResponseIncomplete()
 				responseID = incomplete.Response.ID
 				finishReason = mapResponsesFinishReason(incomplete.Response.IncompleteDetails.Reason, hasFunctionCall)
-				usage = fantasy.Usage{
-					InputTokens:  incomplete.Response.Usage.InputTokens,
-					OutputTokens: incomplete.Response.Usage.OutputTokens,
-					TotalTokens:  incomplete.Response.Usage.InputTokens + incomplete.Response.Usage.OutputTokens,
-				}
-				if incomplete.Response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-					usage.ReasoningTokens = incomplete.Response.Usage.OutputTokensDetails.ReasoningTokens
-				}
-				if incomplete.Response.Usage.InputTokensDetails.CachedTokens != 0 {
-					usage.CacheReadTokens = incomplete.Response.Usage.InputTokensDetails.CachedTokens
-				}
+				usage = responsesUsage(incomplete.Response)
 
 			case "error":
 				errorEvent := event.AsError()
@@ -1377,18 +1360,7 @@ func (o responsesLanguageModel) generateObjectWithJSONMode(ctx context.Context, 
 		obj, err = schema.ParseAndValidate(jsonText, call.Schema)
 	}
 
-	usage := fantasy.Usage{
-		InputTokens:  response.Usage.InputTokens,
-		OutputTokens: response.Usage.OutputTokens,
-		TotalTokens:  response.Usage.InputTokens + response.Usage.OutputTokens,
-	}
-	if response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-		usage.ReasoningTokens = response.Usage.OutputTokensDetails.ReasoningTokens
-	}
-	if response.Usage.InputTokensDetails.CachedTokens != 0 {
-		usage.CacheReadTokens = response.Usage.InputTokensDetails.CachedTokens
-	}
-
+	usage := responsesUsage(*response)
 	finishReason := mapResponsesFinishReason(response.IncompleteDetails.Reason, false)
 
 	if err != nil {
@@ -1523,33 +1495,13 @@ func (o responsesLanguageModel) streamObjectWithJSONMode(ctx context.Context, ca
 				completed := event.AsResponseCompleted()
 				responseID = completed.Response.ID
 				finishReason = mapResponsesFinishReason(completed.Response.IncompleteDetails.Reason, hasFunctionCall)
-				usage = fantasy.Usage{
-					InputTokens:  completed.Response.Usage.InputTokens,
-					OutputTokens: completed.Response.Usage.OutputTokens,
-					TotalTokens:  completed.Response.Usage.InputTokens + completed.Response.Usage.OutputTokens,
-				}
-				if completed.Response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-					usage.ReasoningTokens = completed.Response.Usage.OutputTokensDetails.ReasoningTokens
-				}
-				if completed.Response.Usage.InputTokensDetails.CachedTokens != 0 {
-					usage.CacheReadTokens = completed.Response.Usage.InputTokensDetails.CachedTokens
-				}
+				usage = responsesUsage(completed.Response)
 
 			case "response.incomplete":
 				incomplete := event.AsResponseIncomplete()
 				responseID = incomplete.Response.ID
 				finishReason = mapResponsesFinishReason(incomplete.Response.IncompleteDetails.Reason, hasFunctionCall)
-				usage = fantasy.Usage{
-					InputTokens:  incomplete.Response.Usage.InputTokens,
-					OutputTokens: incomplete.Response.Usage.OutputTokens,
-					TotalTokens:  incomplete.Response.Usage.InputTokens + incomplete.Response.Usage.OutputTokens,
-				}
-				if incomplete.Response.Usage.OutputTokensDetails.ReasoningTokens != 0 {
-					usage.ReasoningTokens = incomplete.Response.Usage.OutputTokensDetails.ReasoningTokens
-				}
-				if incomplete.Response.Usage.InputTokensDetails.CachedTokens != 0 {
-					usage.CacheReadTokens = incomplete.Response.Usage.InputTokensDetails.CachedTokens
-				}
+				usage = responsesUsage(incomplete.Response)
 
 			case "error":
 				errorEvent := event.AsError()
