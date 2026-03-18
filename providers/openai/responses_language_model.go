@@ -346,7 +346,10 @@ func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.Res
 
 func validatePreviousResponseIDPrompt(prompt fantasy.Prompt) error {
 	for _, msg := range prompt {
-		if msg.Role == fantasy.MessageRoleAssistant {
+		switch msg.Role {
+		case fantasy.MessageRoleSystem, fantasy.MessageRoleUser:
+			continue
+		default:
 			return errors.New(previousResponseIDHistoryError)
 		}
 	}
