@@ -1452,6 +1452,7 @@ func mapFinishReason(reason genai.FinishReason) fantasy.FinishReason {
 func mapUsage(usage *genai.GenerateContentResponseUsageMetadata) fantasy.Usage {
 	return fantasy.Usage{
 		InputTokens:         int64(usage.PromptTokenCount),
+		PromptTokens:        max(0, int64(usage.PromptTokenCount)-int64(usage.CachedContentTokenCount)),
 		OutputTokens:        int64(usage.CandidatesTokenCount),
 		TotalTokens:         int64(usage.TotalTokenCount),
 		ReasoningTokens:     int64(usage.ThoughtsTokenCount),

@@ -219,6 +219,7 @@ func (l *languageModel) Generate(ctx context.Context, call fantasy.Call) (*fanta
 	if lastResponse.Usage != nil {
 		usage = fantasy.Usage{
 			InputTokens:     int64(lastResponse.Usage.PromptTokens),
+			PromptTokens:    int64(lastResponse.Usage.PromptTokens),
 			OutputTokens:    int64(lastResponse.Usage.CompletionTokens),
 			TotalTokens:     int64(lastResponse.Usage.PromptTokens + lastResponse.Usage.CompletionTokens),
 			ReasoningTokens: int64(lastResponse.Usage.ReasoningTokens),
@@ -298,6 +299,7 @@ func (l *languageModel) Stream(ctx context.Context, call fantasy.Call) (fantasy.
 			if resp.Usage != nil {
 				usage = fantasy.Usage{
 					InputTokens:     int64(resp.Usage.PromptTokens),
+					PromptTokens:    int64(resp.Usage.PromptTokens),
 					OutputTokens:    int64(resp.Usage.CompletionTokens),
 					TotalTokens:     int64(resp.Usage.PromptTokens + resp.Usage.CompletionTokens),
 					ReasoningTokens: int64(resp.Usage.ReasoningTokens),

@@ -492,6 +492,7 @@ func languageModelUsage(response openaisdk.ChatCompletion) (fantasy.Usage, fanta
 
 	return fantasy.Usage{
 		InputTokens:     usage.PromptTokens,
+		PromptTokens:    max(0, usage.PromptTokens-promptTokenDetails.CachedTokens),
 		OutputTokens:    usage.CompletionTokens,
 		TotalTokens:     usage.TotalTokens,
 		ReasoningTokens: completionTokenDetails.ReasoningTokens,
@@ -523,6 +524,7 @@ func languageModelStreamUsage(chunk openaisdk.ChatCompletionChunk, _ map[string]
 	promptTokenDetails := usage.PromptTokensDetails
 	aiUsage := fantasy.Usage{
 		InputTokens:     usage.PromptTokens,
+		PromptTokens:    max(0, usage.PromptTokens-promptTokenDetails.CachedTokens),
 		OutputTokens:    usage.CompletionTokens,
 		TotalTokens:     usage.TotalTokens,
 		ReasoningTokens: completionTokenDetails.ReasoningTokens,
