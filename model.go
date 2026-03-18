@@ -9,7 +9,10 @@ import (
 
 // Usage represents token usage statistics for a model call.
 type Usage struct {
-	InputTokens         int64 `json:"input_tokens"`
+	InputTokens int64 `json:"input_tokens"`
+	// PromptTokens represents the non-cached, billable input token count. It may differ
+	// from InputTokens for cache-aware providers.
+	PromptTokens        int64 `json:"prompt_tokens"`
 	OutputTokens        int64 `json:"output_tokens"`
 	TotalTokens         int64 `json:"total_tokens"`
 	ReasoningTokens     int64 `json:"reasoning_tokens"`
@@ -18,8 +21,9 @@ type Usage struct {
 }
 
 func (u Usage) String() string {
-	return fmt.Sprintf("Usage{Input: %d, Output: %d, Total: %d, Reasoning: %d, CacheCreation: %d, CacheRead: %d}",
+	return fmt.Sprintf("Usage{Input: %d, Prompt: %d, Output: %d, Total: %d, Reasoning: %d, CacheCreation: %d, CacheRead: %d}",
 		u.InputTokens,
+		u.PromptTokens,
 		u.OutputTokens,
 		u.TotalTokens,
 		u.ReasoningTokens,

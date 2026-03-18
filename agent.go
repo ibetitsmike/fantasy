@@ -1476,6 +1476,7 @@ func (a *agent) processStepStream(ctx context.Context, stream StreamResponse, op
 func addUsage(a, b Usage) Usage {
 	return Usage{
 		InputTokens:         a.InputTokens + b.InputTokens,
+		PromptTokens:        a.PromptTokens + b.PromptTokens,
 		OutputTokens:        a.OutputTokens + b.OutputTokens,
 		TotalTokens:         a.TotalTokens + b.TotalTokens,
 		ReasoningTokens:     a.ReasoningTokens + b.ReasoningTokens,

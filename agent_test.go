@@ -90,6 +90,62 @@ func (m *mockLanguageModel) StreamObject(ctx context.Context, call ObjectCall) (
 	return nil, fmt.Errorf("mock StreamObject not implemented")
 }
 
+func TestAddUsage_SumsAllFieldsIncludingPromptTokens(t *testing.T) {
+	t.Parallel()
+
+	got := addUsage(
+		Usage{
+			InputTokens:         100,
+			PromptTokens:        75,
+			OutputTokens:        25,
+			TotalTokens:         125,
+			ReasoningTokens:     5,
+			CacheCreationTokens: 20,
+			CacheReadTokens:     25,
+		},
+		Usage{
+			InputTokens:         40,
+			PromptTokens:        30,
+			OutputTokens:        10,
+			TotalTokens:         50,
+			ReasoningTokens:     2,
+			CacheCreationTokens: 3,
+			CacheReadTokens:     10,
+		},
+	)
+
+	require.Equal(t, Usage{
+		InputTokens:         140,
+		PromptTokens:        105,
+		OutputTokens:        35,
+		TotalTokens:         175,
+		ReasoningTokens:     7,
+		CacheCreationTokens: 23,
+		CacheReadTokens:     35,
+	}, got)
+}
+
+func TestPromptTokens_OpenAIStyleUsagePreservesRawInputAndTotalTokens(t *testing.T) {
+	t.Parallel()
+
+	usage := Usage{
+		InputTokens:     1000,
+		PromptTokens:    600,
+		OutputTokens:    500,
+		TotalTokens:     1500,
+		CacheReadTokens: 400,
+	}
+
+	require.Equal(t, int64(1000), usage.InputTokens)
+	require.Equal(t, int64(600), usage.PromptTokens)
+	require.Equal(t, int64(500), usage.OutputTokens)
+	require.Equal(t, int64(1500), usage.TotalTokens)
+
+	mutatedTotal := usage.PromptTokens + usage.OutputTokens
+	require.Equal(t, int64(1100), mutatedTotal)
+	require.NotEqual(t, usage.TotalTokens, mutatedTotal)
+}
+
 // Test result.content - comprehensive content types (matches TS test)
 func TestAgent_Generate_ResultContent_AllTypes(t *testing.T) {
 	t.Parallel()
