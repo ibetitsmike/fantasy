@@ -121,7 +121,9 @@ func getResponsesModelConfig(modelID string) responsesModelConfig {
 	}
 }
 
-const previousResponseIDHistoryError = "cannot combine previous_response_id with replayed conversation history; use either previous_response_id (server-side chaining) or explicit message replay, not both"
+const (
+	previousResponseIDHistoryError = "cannot combine previous_response_id with replayed conversation history; use either previous_response_id (server-side chaining) or explicit message replay, not both"
+)
 
 func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.ResponseNewParams, []fantasy.CallWarning, error) {
 	var warnings []fantasy.CallWarning
