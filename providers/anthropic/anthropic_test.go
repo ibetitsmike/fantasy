@@ -460,6 +460,35 @@ func TestGenerate_SendsOutputConfigEffort(t *testing.T) {
 	requireAnthropicEffort(t, call.body, EffortMedium)
 }
 
+func TestGenerate_UsagePromptTokensMatchesInputTokens(t *testing.T) {
+	t.Parallel()
+
+	server, calls := newAnthropicJSONServer(mockAnthropicGenerateResponse())
+	defer server.Close()
+
+	provider, err := New(
+		WithAPIKey("test-api-key"),
+		WithBaseURL(server.URL),
+	)
+	require.NoError(t, err)
+
+	model, err := provider.LanguageModel(context.Background(), "claude-sonnet-4-20250514")
+	require.NoError(t, err)
+
+	resp, err := model.Generate(context.Background(), fantasy.Call{Prompt: testPrompt()})
+	require.NoError(t, err)
+
+	call := awaitAnthropicCall(t, calls)
+	require.Equal(t, "POST", call.method)
+	require.Equal(t, "/v1/messages", call.path)
+	require.Equal(t, int64(5), resp.Usage.InputTokens)
+	require.Equal(t, resp.Usage.InputTokens, resp.Usage.PromptTokens)
+	require.Equal(t, int64(2), resp.Usage.OutputTokens)
+	require.Equal(t, int64(7), resp.Usage.TotalTokens)
+	require.Equal(t, int64(0), resp.Usage.CacheCreationTokens)
+	require.Equal(t, int64(0), resp.Usage.CacheReadTokens)
+}
+
 func TestStream_SendsOutputConfigEffort(t *testing.T) {
 	t.Parallel()
 
@@ -861,6 +890,58 @@ func TestGenerate_WebSearchResponse(t *testing.T) {
 		"Based on recent search results, here is the latest AI news.",
 		texts[0].Text,
 	)
+}
+
+func TestStream_UsagePromptTokensMatchesInputTokens(t *testing.T) {
+	t.Parallel()
+
+	server, calls := newAnthropicStreamingServer([]string{
+		"event: message_start\n",
+		`data: {"type":"message_start","message":{"id":"msg_01Test","type":"message","role":"assistant","model":"claude-sonnet-4-20250514","content":[],"stop_reason":null,"usage":{"input_tokens":5,"output_tokens":0}}}` + "\n\n",
+		"event: content_block_start\n",
+		`data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}` + "\n\n",
+		"event: content_block_delta\n",
+		`data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hi there"}}` + "\n\n",
+		"event: content_block_stop\n",
+		`data: {"type":"content_block_stop","index":0}` + "\n\n",
+		"event: message_delta\n",
+		`data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":2}}` + "\n\n",
+		"event: message_stop\n",
+		`data: {"type":"message_stop"}` + "\n\n",
+	})
+	defer server.Close()
+
+	provider, err := New(
+		WithAPIKey("test-api-key"),
+		WithBaseURL(server.URL),
+	)
+	require.NoError(t, err)
+
+	model, err := provider.LanguageModel(context.Background(), "claude-sonnet-4-20250514")
+	require.NoError(t, err)
+
+	stream, err := model.Stream(context.Background(), fantasy.Call{Prompt: testPrompt()})
+	require.NoError(t, err)
+
+	var finish *fantasy.StreamPart
+	stream(func(part fantasy.StreamPart) bool {
+		if part.Type == fantasy.StreamPartTypeFinish {
+			partCopy := part
+			finish = &partCopy
+		}
+		return true
+	})
+
+	call := awaitAnthropicCall(t, calls)
+	require.Equal(t, "POST", call.method)
+	require.Equal(t, "/v1/messages", call.path)
+	require.NotNil(t, finish)
+	require.Equal(t, int64(5), finish.Usage.InputTokens)
+	require.Equal(t, finish.Usage.InputTokens, finish.Usage.PromptTokens)
+	require.Equal(t, int64(2), finish.Usage.OutputTokens)
+	require.Equal(t, int64(7), finish.Usage.TotalTokens)
+	require.Equal(t, int64(0), finish.Usage.CacheCreationTokens)
+	require.Equal(t, int64(0), finish.Usage.CacheReadTokens)
 }
 
 func TestGenerate_WebSearchToolInRequest(t *testing.T) {
