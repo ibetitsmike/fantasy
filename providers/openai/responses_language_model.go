@@ -820,7 +820,7 @@ func (o responsesLanguageModel) Generate(ctx context.Context, call fantasy.Call)
 				ProviderExecuted: false,
 				ToolCallID:       outputItem.CallID,
 				ToolName:         outputItem.Name,
-				Input:            outputItem.Arguments.OfString,
+				Input:            outputItem.Arguments,
 			})
 
 		case "web_search_call":
@@ -1020,7 +1020,7 @@ func (o responsesLanguageModel) Stream(ctx context.Context, call fantasy.Call) (
 							Type:          fantasy.StreamPartTypeToolCall,
 							ID:            done.Item.CallID,
 							ToolCallName:  done.Item.Name,
-							ToolCallInput: done.Item.Arguments.OfString,
+							ToolCallInput: done.Item.Arguments,
 						}) {
 							return
 						}
