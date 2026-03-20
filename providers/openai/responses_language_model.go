@@ -567,12 +567,24 @@ func toResponsesPrompt(prompt fantasy.Prompt, systemMessageMode string, store bo
 					// recognised Responses API input type; skip.
 					continue
 				case fantasy.ContentTypeReasoning:
-					// Reasoning items are always skipped during replay.
-					// When store is enabled, the API already has them
-					// persisted server-side. When store is disabled, the
-					// item IDs are ephemeral and referencing them causes
-					// "Item not found" errors. In both cases, replaying
-					// reasoning inline is not supported by the API.
+					if store {
+						// When store is enabled the reasoning item is
+						// persisted server-side. Emit an item_reference
+						// so the API correctly pairs it with any
+						// subsequent provider-executed tool calls (e.g.
+						// web_search_call) that were in the same step.
+						// Without this reference the API rejects a
+						// replayed web_search_call with "reasoning was
+						// provided without its required following item".
+						reasoningMeta := GetReasoningMetadata(c.Options())
+						if reasoningMeta != nil && reasoningMeta.ItemID != "" {
+							input = append(input, responses.ResponseInputItemParamOfItemReference(reasoningMeta.ItemID))
+						}
+						continue
+					}
+					// When store is disabled, server-side items are
+					// ephemeral and cannot be referenced. Skip the
+					// reasoning item entirely.
 					continue
 				}
 			}

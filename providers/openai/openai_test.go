@@ -3938,20 +3938,22 @@ func TestResponsesToPrompt_ReasoningWithStore(t *testing.T) {
 		},
 	}
 
-	t.Run("store true skips reasoning", func(t *testing.T) {
+	t.Run("store true replays reasoning as item reference", func(t *testing.T) {
 		t.Parallel()
 
 		input, warnings := toResponsesPrompt(prompt, "system", true)
 		require.Empty(t, warnings)
 
-		// With store=true: user, assistant text (reasoning
-		// skipped), follow-up user.
-		require.Len(t, input, 3)
+		// With store=true: user, reasoning item_reference,
+		// assistant text, follow-up user.
+		require.Len(t, input, 4)
+		require.NotNil(t, input[1].OfItemReference)
+		require.Equal(t, reasoningItemID, input[1].OfItemReference.ID)
 
-		// Verify no reasoning item leaked through.
+		// Verify reasoning is replayed only as an item reference.
 		for _, item := range input {
 			require.Nil(t, item.OfReasoning,
-				"reasoning items must not appear when store=true")
+				"reasoning items must not appear inline when store=true")
 		}
 	})
 
@@ -3967,6 +3969,80 @@ func TestResponsesToPrompt_ReasoningWithStore(t *testing.T) {
 		for _, item := range input {
 			require.Nil(t, item.OfReasoning,
 				"reasoning items must not appear when store=false")
+			require.Nil(t, item.OfItemReference,
+				"item references must not appear when store=false")
+		}
+	})
+}
+
+func TestResponsesToPrompt_ReasoningWithWebSearchCombined(t *testing.T) {
+	t.Parallel()
+
+	prompt := fantasy.Prompt{
+		{
+			Role: fantasy.MessageRoleUser,
+			Content: []fantasy.MessagePart{
+				fantasy.TextPart{Text: "Search for the latest AI news"},
+			},
+		},
+		{
+			Role: fantasy.MessageRoleAssistant,
+			Content: []fantasy.MessagePart{
+				fantasy.ReasoningPart{
+					Text: "Searching for AI news",
+					ProviderOptions: fantasy.ProviderOptions{
+						Name: &ResponsesReasoningMetadata{
+							ItemID:  "rs_01",
+							Summary: []string{"Searching for AI news"},
+						},
+					},
+				},
+				fantasy.ToolCallPart{
+					ToolCallID:       "ws_01",
+					ToolName:         "web_search",
+					ProviderExecuted: true,
+				},
+				fantasy.ToolResultPart{
+					ToolCallID:       "ws_01",
+					ProviderExecuted: true,
+				},
+				fantasy.TextPart{Text: "Here is what I found about AI news."},
+			},
+		},
+	}
+
+	t.Run("store true replays reasoning and web search item references", func(t *testing.T) {
+		t.Parallel()
+
+		input, warnings := toResponsesPrompt(prompt, "system instructions", true)
+
+		require.Empty(t, warnings)
+		require.Len(t, input, 4,
+			"expected user + reasoning item_reference + web_search item_reference + assistant text when store=true")
+		require.NotNil(t, input[1].OfItemReference)
+		require.Equal(t, "rs_01", input[1].OfItemReference.ID)
+		require.NotNil(t, input[2].OfItemReference)
+		require.Equal(t, "ws_01", input[2].OfItemReference.ID)
+		require.Nil(t, input[3].OfItemReference)
+		for _, item := range input {
+			require.Nil(t, item.OfReasoning,
+				"reasoning items must not appear inline when store=true")
+		}
+	})
+
+	t.Run("store false skips provider-executed items", func(t *testing.T) {
+		t.Parallel()
+
+		input, warnings := toResponsesPrompt(prompt, "system instructions", false)
+
+		require.Empty(t, warnings)
+		require.Len(t, input, 2,
+			"expected only user + assistant text when store=false")
+		for _, item := range input {
+			require.Nil(t, item.OfItemReference,
+				"item references must not appear when store=false")
+			require.Nil(t, item.OfReasoning,
+				"reasoning items must not appear inline when store=false")
 		}
 	})
 }
