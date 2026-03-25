@@ -12,6 +12,8 @@ import (
 type ReasoningEffort string
 
 const (
+	// ReasoningEffortNone represents ReasoningEffortNone reasoning effort.
+	ReasoningEffortNone ReasoningEffort = "none"
 	// ReasoningEffortMinimal represents minimal reasoning effort.
 	ReasoningEffortMinimal ReasoningEffort = "minimal"
 	// ReasoningEffortLow represents low reasoning effort.
