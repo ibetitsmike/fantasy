@@ -504,6 +504,74 @@ func TestStream_SendsOutputConfigEffort(t *testing.T) {
 	requireAnthropicEffort(t, call.body, EffortHigh)
 }
 
+func TestMapAnthropicUsage(t *testing.T) {
+	t.Parallel()
+
+	got := mapAnthropicUsage(anthropic.Usage{
+		InputTokens:              200,
+		OutputTokens:             75,
+		CacheCreationInputTokens: 30,
+		CacheReadInputTokens:     150,
+	})
+
+	require.Equal(t, fantasy.Usage{
+		InputTokens:         200,
+		OutputTokens:        75,
+		TotalTokens:         275,
+		CacheCreationTokens: 30,
+		CacheReadTokens:     150,
+	}, got)
+}
+
+func TestStream_MapsUsage(t *testing.T) {
+	t.Parallel()
+
+	server, calls := newAnthropicStreamingServer([]string{
+		"event: message_start\n",
+		`data: {"type":"message_start","message":{"id":"msg_01Usage","type":"message","role":"assistant","model":"claude-sonnet-4-20250514","content":[],"stop_reason":null,"usage":{"input_tokens":200,"output_tokens":0,"cache_creation_input_tokens":30,"cache_read_input_tokens":150}}}` + "\n\n",
+		"event: message_delta\n",
+		`data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":75}}` + "\n\n",
+		"event: message_stop\n",
+		`data: {"type":"message_stop"}` + "\n\n",
+	})
+	defer server.Close()
+
+	provider, err := New(
+		WithAPIKey("test-api-key"),
+		WithBaseURL(server.URL),
+	)
+	require.NoError(t, err)
+
+	model, err := provider.LanguageModel(context.Background(), "claude-sonnet-4-20250514")
+	require.NoError(t, err)
+
+	stream, err := model.Stream(context.Background(), fantasy.Call{
+		Prompt: testPrompt(),
+	})
+	require.NoError(t, err)
+
+	var finish *fantasy.StreamPart
+	stream(func(part fantasy.StreamPart) bool {
+		if part.Type == fantasy.StreamPartTypeFinish {
+			partCopy := part
+			finish = &partCopy
+		}
+		return true
+	})
+
+	_ = awaitAnthropicCall(t, calls)
+
+	require.NotNil(t, finish)
+	require.Equal(t, fantasy.FinishReasonStop, finish.FinishReason)
+	require.Equal(t, fantasy.Usage{
+		InputTokens:         200,
+		OutputTokens:        75,
+		TotalTokens:         275,
+		CacheCreationTokens: 30,
+		CacheReadTokens:     150,
+	}, finish.Usage)
+}
+
 type anthropicCall struct {
 	method string
 	path   string
@@ -1574,7 +1642,8 @@ func TestComputerUseToolJSON(t *testing.T) {
 		}
 		_, err := computerUseToolJSON(pdt)
 		require.Error(t, err)
-			require.Contains(t, err.Error(), "tool_version arg is missing")	})
+		require.Contains(t, err.Error(), "tool_version arg is missing")
+	})
 
 	t.Run("returns error for unsupported version", func(t *testing.T) {
 		t.Parallel()
