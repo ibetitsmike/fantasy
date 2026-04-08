@@ -79,3 +79,14 @@ require (
 	gopkg.in/dnaeon/go-vcr.v4 v4.0.6-0.20251110073552-01de4eb40290 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// coder/coder and coder/aibridge use the SasSwart perf fork of
+// openai-go (deferred body serialization, appendCompact skip).
+// This points to kylecarbs' copy of that fork which includes a fix
+// for WithJSONSet being clobbered by deferred serialization.
+// See https://github.com/kylecarbs/openai-go/pull/2
+replace github.com/openai/openai-go/v3 => github.com/kylecarbs/openai-go/v3 v3.0.0-20260319113850-9477dcaedcae
+
+// coder/coder uses a fork of charmbracelet's fork of the Anthropic Go SDK with some
+// additional performance improvements. This is tracking the coder_2_33 branch.
+replace github.com/charmbracelet/anthropic-sdk-go => github.com/coder/anthropic-sdk-go v0.0.0-20260408132733-2aae21e9fc9c
