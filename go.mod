@@ -89,4 +89,4 @@ replace github.com/openai/openai-go/v3 => github.com/kylecarbs/openai-go/v3 v3.0
 
 // coder/coder uses a fork of charmbracelet's fork of the Anthropic Go SDK with some
 // additional performance improvements. This is tracking the coder_2_33 branch.
-replace github.com/charmbracelet/anthropic-sdk-go => github.com/coder/anthropic-sdk-go v0.0.0-20260408132733-2aae21e9fc9c
+replace github.com/charmbracelet/anthropic-sdk-go => github.com/coder/anthropic-sdk-go v0.0.0-20260409105508-5711db120546
