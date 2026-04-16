@@ -19,6 +19,10 @@ const (
 	EffortMedium Effort = "medium"
 	// EffortHigh represents high output effort.
 	EffortHigh Effort = "high"
+	// EffortXHigh represents extra-high output effort.
+	// It sits between EffortHigh and EffortMax and was introduced with
+	// Claude Opus 4.7.
+	EffortXHigh Effort = "xhigh"
 	// EffortMax represents maximum output effort.
 	EffortMax Effort = "max"
 )
