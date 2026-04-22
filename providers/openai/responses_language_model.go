@@ -158,6 +158,11 @@ func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.Res
 		}
 	}
 
+	storeEnabled := openaiOptions != nil && openaiOptions.Store != nil && *openaiOptions.Store
+	if hasComputerUseTool(call.Tools) && !storeEnabled {
+		return nil, warnings, errors.New(computerUseStoreError)
+	}
+
 	if openaiOptions != nil && openaiOptions.Store != nil {
 		params.Store = param.NewOpt(*openaiOptions.Store)
 	} else {
@@ -168,13 +173,12 @@ func (o responsesLanguageModel) prepareParams(call fantasy.Call) (*responses.Res
 		if err := validatePreviousResponseIDPrompt(call.Prompt); err != nil {
 			return nil, warnings, err
 		}
-		if openaiOptions.Store == nil || !*openaiOptions.Store {
+		if !storeEnabled {
 			return nil, warnings, errors.New(previousResponseIDStoreError)
 		}
 		params.PreviousResponseID = param.NewOpt(*openaiOptions.PreviousResponseID)
 	}
 
-	storeEnabled := openaiOptions != nil && openaiOptions.Store != nil && *openaiOptions.Store
 	input, inputWarnings := toResponsesPrompt(call.Prompt, modelConfig.systemMessageMode, storeEnabled)
 	warnings = append(warnings, inputWarnings...)
 
@@ -393,6 +397,7 @@ func responsesUsage(resp responses.Response) fantasy.Usage {
 func toResponsesPrompt(prompt fantasy.Prompt, systemMessageMode string, store bool) (responses.ResponseInputParam, []fantasy.CallWarning) {
 	var input responses.ResponseInputParam
 	var warnings []fantasy.CallWarning
+	computerToolCalls := make(map[string]*OpenAIComputerUseCallMetadata)
 
 	for _, msg := range prompt {
 		switch msg.Role {
@@ -536,6 +541,14 @@ func toResponsesPrompt(prompt fantasy.Prompt, systemMessageMode string, store bo
 						continue
 					}
 
+					if metadata := getComputerUseCallMetadata(toolCallPart.ProviderOptions); metadata != nil {
+						computerToolCalls[toolCallPart.ToolCallID] = metadata
+						if store {
+							input = append(input, responses.ResponseInputItemParamOfItemReference(toolCallPart.ToolCallID))
+						}
+						continue
+					}
+
 					if toolCallPart.ProviderExecuted {
 						if store {
 							// Round-trip provider-executed tools via
@@ -607,6 +620,19 @@ func toResponsesPrompt(prompt fantasy.Prompt, systemMessageMode string, store bo
 				// Provider-executed tool results (e.g. web search)
 				// are already round-tripped via the tool call; skip.
 				if toolResultPart.ProviderExecuted {
+					continue
+				}
+
+				if metadata := computerToolCalls[toolResultPart.ToolCallID]; metadata != nil {
+					computerOutput, err := computerUseToolResultInput(toolResultPart, metadata)
+					if err != nil {
+						warnings = append(warnings, fantasy.CallWarning{
+							Type:    fantasy.CallWarningTypeOther,
+							Message: err.Error(),
+						})
+						continue
+					}
+					input = append(input, computerOutput)
 					continue
 				}
 
@@ -688,13 +714,25 @@ func toResponsesTools(tools []fantasy.Tool, toolChoice *fantasy.ToolChoice, opti
 			continue
 		}
 		if tool.GetType() == fantasy.ToolTypeProviderDefined {
-			pt, ok := tool.(fantasy.ProviderDefinedTool)
+			pt, ok := asProviderDefinedTool(tool)
 			if !ok {
 				continue
 			}
 			switch pt.ID {
 			case "web_search":
 				openaiTools = append(openaiTools, toWebSearchToolParam(pt))
+				continue
+			case computerUseToolID:
+				computerTool, err := toComputerUseToolParam(pt)
+				if err != nil {
+					warnings = append(warnings, fantasy.CallWarning{
+						Type:    fantasy.CallWarningTypeUnsupportedTool,
+						Tool:    tool,
+						Message: err.Error(),
+					})
+					continue
+				}
+				openaiTools = append(openaiTools, computerTool)
 				continue
 			}
 		}
@@ -805,6 +843,14 @@ func (o responsesLanguageModel) Generate(ctx context.Context, call fantasy.Call)
 				ToolName:         outputItem.Name,
 				Input:            outputItem.Arguments.OfString,
 			})
+
+		case "computer_call":
+			hasFunctionCall = true
+			computerCall, err := computerUseToolCallContent(outputItem.AsComputerCall())
+			if err != nil {
+				return nil, fmt.Errorf("failed to build computer tool call content: %w", err)
+			}
+			content = append(content, computerCall)
 
 		case "web_search_call":
 			// Provider-executed web search tool call. Emit both
@@ -942,6 +988,15 @@ func (o responsesLanguageModel) Stream(ctx context.Context, call fantasy.Call) (
 						return
 					}
 
+				case "computer_call":
+					if !yield(fantasy.StreamPart{
+						Type:         fantasy.StreamPartTypeToolInputStart,
+						ID:           added.Item.ID,
+						ToolCallName: computerUseAPIName,
+					}) {
+						return
+					}
+
 				case "web_search_call":
 					// Provider-executed web search; emit start.
 					if !yield(fantasy.StreamPart{
@@ -1007,6 +1062,35 @@ func (o responsesLanguageModel) Stream(ctx context.Context, call fantasy.Call) (
 						}) {
 							return
 						}
+					}
+
+				case "computer_call":
+					hasFunctionCall = true
+					computerCall, err := computerUseToolCallContent(done.Item.AsComputerCall())
+					if err != nil {
+						if !yield(fantasy.StreamPart{
+							Type:  fantasy.StreamPartTypeError,
+							Error: fmt.Errorf("failed to build computer tool call content: %w", err),
+						}) {
+							return
+						}
+						return
+					}
+					if !yield(fantasy.StreamPart{
+						Type: fantasy.StreamPartTypeToolInputEnd,
+						ID:   computerCall.ToolCallID,
+					}) {
+						return
+					}
+					if !yield(fantasy.StreamPart{
+						Type:             fantasy.StreamPartTypeToolCall,
+						ID:               computerCall.ToolCallID,
+						ToolCallName:     computerCall.ToolName,
+						ToolCallInput:    computerCall.Input,
+						ProviderExecuted: computerCall.ProviderExecuted,
+						ProviderMetadata: computerCall.ProviderMetadata,
+					}) {
+						return
 					}
 
 				case "web_search_call":

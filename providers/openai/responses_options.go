@@ -4,6 +4,7 @@ package openai
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 
 	"charm.land/fantasy"
 )
@@ -14,6 +15,7 @@ const (
 	TypeResponsesProviderOptions   = Name + ".responses.options"
 	TypeResponsesReasoningMetadata = Name + ".responses.reasoning_metadata"
 	TypeWebSearchCallMetadata      = Name + ".responses.web_search_call_metadata"
+	TypeComputerUseCallMetadata    = Name + ".responses.computer_use_call_metadata"
 )
 
 // Register OpenAI Responses API-specific types with the global registry.
@@ -41,6 +43,13 @@ func init() {
 	})
 	fantasy.RegisterProviderType(TypeWebSearchCallMetadata, func(data []byte) (fantasy.ProviderOptionsData, error) {
 		var v WebSearchCallMetadata
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return &v, nil
+	})
+	fantasy.RegisterProviderType(TypeComputerUseCallMetadata, func(data []byte) (fantasy.ProviderOptionsData, error) {
+		var v OpenAIComputerUseCallMetadata
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}
@@ -270,7 +279,7 @@ func ParseResponsesOptions(data map[string]any) (*ResponsesProviderOptions, erro
 
 // IsResponsesModel checks if a model ID is a Responses API model for OpenAI.
 func IsResponsesModel(modelID string) bool {
-	return slices.Contains(responsesModelIDs, modelID)
+	return slices.Contains(responsesModelIDs, modelID) || strings.Contains(modelID, "computer-use")
 }
 
 // IsResponsesReasoningModel checks if a model ID is a Responses API reasoning model for OpenAI.
@@ -384,5 +393,41 @@ func (m *WebSearchCallMetadata) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*m = WebSearchCallMetadata(p)
+	return nil
+}
+
+// OpenAIComputerUsePendingSafetyCheck stores a pending safety check from an
+// OpenAI computer tool call using local types suitable for JSON round-tripping.
+type OpenAIComputerUsePendingSafetyCheck struct {
+	ID      string `json:"id"`
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+// OpenAIComputerUseCallMetadata stores structured metadata for an OpenAI
+// computer tool call. CallID is required to submit the matching
+// computer_call_output on replay.
+type OpenAIComputerUseCallMetadata struct {
+	CallID              string                                `json:"call_id"`
+	PendingSafetyChecks []OpenAIComputerUsePendingSafetyCheck `json:"pending_safety_checks,omitempty"`
+}
+
+// Options implements the ProviderOptionsData interface.
+func (*OpenAIComputerUseCallMetadata) Options() {}
+
+// MarshalJSON implements custom JSON marshaling with type info.
+func (m OpenAIComputerUseCallMetadata) MarshalJSON() ([]byte, error) {
+	type plain OpenAIComputerUseCallMetadata
+	return fantasy.MarshalProviderType(TypeComputerUseCallMetadata, plain(m))
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling with type info.
+func (m *OpenAIComputerUseCallMetadata) UnmarshalJSON(data []byte) error {
+	type plain OpenAIComputerUseCallMetadata
+	var p plain
+	if err := fantasy.UnmarshalProviderType(data, &p); err != nil {
+		return err
+	}
+	*m = OpenAIComputerUseCallMetadata(p)
 	return nil
 }
